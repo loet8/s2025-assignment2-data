@@ -1,1 +1,3 @@
-Document 5 doesn't have any line-level duplicates.
+version https://git-lfs.github.com/spec/v1
+oid sha256:74080372dcf9402cba928ae9da915b2ac251fea945c093a7054be79758d495e3
+size 51
