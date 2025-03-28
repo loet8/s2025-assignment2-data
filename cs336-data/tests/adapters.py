@@ -79,12 +79,12 @@ def run_mask_emails(text: str) -> tuple[str, int]:
 
 def run_mask_phone_numbers(text: str) -> tuple[str, int]:
     phone_pattern = r'''
-        (?:(?:\+1\s*)?    #country code (+1) 
-        (?:\(?\d{3}\)?    #Area code with parentheses (e.g., (123) or 123)
-        [\s\-\.]?         #separator: space, hyphen, or dot
-        \d{3}             #First 3 digits
-        [\s\-\.]?         #separator
-        \d{4}))           #Last 4 digits
+        (?:(?:\+1\s*)?    
+        (?:\(?\d{3}\)?    
+        [\s\-\.]?         
+        \d{3}             
+        [\s\-\.]?         
+        \d{4}))           
     '''
 
     matches = re.findall(phone_pattern, text, re.VERBOSE)
@@ -98,17 +98,17 @@ def run_mask_phone_numbers(text: str) -> tuple[str, int]:
 
 def run_mask_ips(text: str) -> tuple[str, int]:
     ip_pattern = r'''
-        \b                   # Word boundary to ensure it's a standalone IP
-        (?:                  # Non-capturing group for 4 octets
-            (?:25[0-5]|      # Matches 250-255
-             2[0-4][0-9]|    # Matches 200-249
-             1[0-9]{2}|      # Matches 100-199
-             [1-9][0-9]?|    # Matches 1-99
-             0)              # Matches zero
-            \.               # Dot separator
-        ){3}                 # Repeat 3 times
-        (?:25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9][0-9]?|0)  # Fourth octet
-        \b                   # Word boundary to ensure it's a standalone IP
+        \b                   
+        (?:                  
+            (?:25[0-5]|      
+             2[0-4][0-9]|    
+             1[0-9]{2}|      
+             [1-9][0-9]?|    
+             0)              
+            \.               
+        ){3}                 
+        (?:25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9][0-9]?|0)  
+        \b                   
     '''
 
     matches = re.findall(ip_pattern, text, re.VERBOSE)
@@ -234,7 +234,6 @@ def run_exact_line_deduplication(
 
 
 def normalize_text(text: str) -> str:
-    # Lowercase, remove punctuation, normalize whitespaces
     text = text.lower()
     text = re.sub(rf"[{re.escape(string.punctuation)}]", " ", text)
     text = re.sub(r'\s+', ' ', text).strip()
@@ -254,40 +253,33 @@ def run_minhash_deduplication(
 ):
     lsh = MinHashLSH(threshold=jaccard_threshold, num_perm=num_hashes)
 
-    # Step 2: Map document to its MinHash signature
     minhashes = {}
     for file_path in input_files:
         with open(file_path, 'r', encoding='utf-8') as file:
             text = normalize_text(file.read())
             doc_ngrams = get_ngrams(text, ngrams)
 
-            # Create MinHash signature
             minhash = MinHash(num_perm=num_hashes)
             for ngram in doc_ngrams:
                 minhash.update(ngram.encode('utf-8'))
 
-            # Store the MinHash signature and add it to LSH
             minhashes[file_path] = minhash
             lsh.insert(file_path, minhash)
 
-    # Step 3: Identify candidate duplicates
     clusters = defaultdict(set)
     for file_path, minhash in minhashes.items():
         candidates = lsh.query(minhash)
         for candidate in candidates:
             clusters[file_path].add(candidate)
 
-    # Step 4: Deduplication logic
     seen_documents = set()
     os.makedirs(output_directory, exist_ok=True)
 
     for file_path, duplicates in clusters.items():
         if file_path not in seen_documents:
-            # Select one document to keep
             selected_document = random.choice(list(duplicates))
-            seen_documents.update(duplicates)  # Mark all cluster members as processed
+            seen_documents.update(duplicates)  
 
-            # Copy the selected document to the output
             output_path = os.path.join(output_directory, os.path.basename(selected_document))
             with open(selected_document, 'r', encoding='utf-8') as infile, open(output_path, 'w', encoding='utf-8') as outfile:
                 outfile.write(infile.read())
